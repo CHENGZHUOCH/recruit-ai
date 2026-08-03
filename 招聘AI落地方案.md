@@ -135,6 +135,18 @@ HR 直接问:「上周面试通过率多少?」「Offer 但未入职的有哪些
 
 ## 五、可运行 Demo(本目录)
 
+### 5.0 在线预览与代码链接
+
+| 交付物 | 地址 |
+| --- | --- |
+| 在线预览(浏览器直接打开,无需部署) | https://chengzhuoch.github.io/recruit-ai/demo/dashboard.html |
+| 代码仓库 | https://github.com/CHENGZHUOCH/recruit-ai |
+| 可运行 Demo 附件(含演示数据) | 见提交邮件附件 `AI招聘数据管家.zip` |
+
+> 在线预览为内置演示数据;本地运行 `demo/app.py` 后展示实时数据。
+
+### 5.1 Demo 说明
+
 Demo 位于 [`./demo`](./demo),**核心零第三方依赖,Python 3 直接运行**,完整演示"消息 → 解析 → 入库 → 看板"全链路,且已打通企业微信智能机器人真机接收。
 
 ```bash
@@ -148,7 +160,7 @@ python app.py            # 2. 启动服务,浏览器打开 http://127.0.0.1:8080
 - **腾讯文档同步**:`python sync_tencent_docs.py` 导出 CSV,直接导入腾讯在线文档
 - **接入真实大模型**:在 `demo/config.py` 填入 `DEEPSEEK_API_KEY`,即启用 DeepSeek 语义解析(不填则走内置规则引擎,同样可跑)
 
-> 代码可上传 GitHub / Gitee 作为在线代码链接;看板为纯静态单文件,可部署到任意静态托管(如 GitHub Pages、腾讯云 COS)实现永久在线预览。
+> 看板为纯静态单文件,可部署到任意静态托管(如 GitHub Pages、腾讯云 COS)实现永久在线预览。
 
 ---
 

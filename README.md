@@ -21,14 +21,14 @@ AI 大模型自动解析为结构化数据写入数据库,招聘看板实时更�
 
 ## 在线预览(无需部署,浏览器直接打开)
 
-[AI 招聘数据看板(在线 Demo)](https://USER.github.io/REPO/demo/dashboard.html)
+[AI 招聘数据看板(在线 Demo)](https://chengzhuoch.github.io/recruit-ai/demo/dashboard.html)
 
 > 在线预览为内置演示数据;本地运行则展示你录入的实时数据。
 
 ## 快速开始(5 分钟)
 
 ```bash
-git clone https://github.com/USER/REPO.git
+git clone https://github.com/CHENGZHUOCH/recruit-ai.git
 cd REPO/demo
 python seed_demo.py    # 生成 30 条演示数据
 python app.py          # 启动看板服务
