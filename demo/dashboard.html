@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>招聘数据智能看板</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+  body { background: #f1f5f9; }
+  .card { background:#fff; border-radius:14px; box-shadow:0 1px 3px rgba(15,23,42,.06); }
+  .fa { margin-right: 6px; }
+  .badge { padding:2px 10px; border-radius:999px; font-size:12px; font-weight:500; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- 顶栏 -->
+<header class="bg-white border-b border-slate-200 sticky top-0 z-20">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center">
+        <i class="fa fa-users"></i>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold text-slate-800 leading-tight">招聘数据智能看板</h1>
+        <p class="text-xs text-slate-400">AI 对话式招聘数据管家 · 实时同步</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <span id="aiMode" class="text-xs text-slate-400 hidden md:inline">模式:—</span>
+      <span id="updateTime" class="text-xs text-slate-400"></span>
+      <button onclick="loadData()" class="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700">
+        <i class="fa fa-refresh"></i>刷新
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 py-5 space-y-5">
+
+  <!-- 统计卡片 -->
+  <section id="statCards" class="grid grid-cols-2 md:grid-cols-4 gap-4"></section>
+
+  <!-- 图表区 -->
+  <section class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+    <div class="card p-4 lg:col-span-1">
+      <h3 class="text-sm font-semibold text-slate-700 mb-2"><i class="fa fa-filter text-blue-500"></i>招聘漏斗</h3>
+      <div id="funnel" class="h-72"></div>
+    </div>
+    <div class="card p-4 lg:col-span-1">
+      <h3 class="text-sm font-semibold text-slate-700 mb-2"><i class="fa fa-pie-chart text-blue-500"></i>阶段分布</h3>
+      <div id="stagePie" class="h-72"></div>
+    </div>
+    <div class="card p-4 lg:col-span-1">
+      <h3 class="text-sm font-semibold text-slate-700 mb-2"><i class="fa fa-line-chart text-blue-500"></i>近 14 天新增趋势</h3>
+      <div id="trend" class="h-72"></div>
+    </div>
+  </section>
+
+  <!-- 候选人明细 -->
+  <section class="card p-4">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="text-sm font-semibold text-slate-700"><i class="fa fa-table text-blue-500"></i>候选人明细</h3>
+      <div class="flex items-center gap-2">
+        <select id="stageFilter" onchange="renderTable()" class="text-xs border border-slate-300 rounded-lg px-2 py-1">
+          <option value="">全部阶段</option>
+          <option>简历</option><option>初筛</option><option>面试</option><option>Offer</option><option>入职</option><option>淘汰</option>
+        </select>
+      </div>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-xs text-slate-400 border-b">
+            <th class="py-2 pr-4">姓名</th><th class="py-2 pr-4">岗位</th>
+            <th class="py-2 pr-4">阶段</th><th class="py-2 pr-4">状态</th>
+            <th class="py-2 pr-4">薪资(元/月)</th><th class="py-2 pr-4">备注</th>
+            <th class="py-2 pr-4">来源</th><th class="py-2">时间</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <p id="emptyTip" class="hidden text-center text-slate-400 py-8">暂无数据 — 可在企业微信群说一句「张三 通过一面 后端岗 期望15k」,系统自动入库</p>
+    </div>
+  </section>
+
+</main>
+
+<script>
+const STAGE_COLORS = { "简历":"#94a3b8","初筛":"#38bdf8","面试":"#6366f1","Offer":"#22c55e","入职":"#0ea5e9","淘汰":"#f43f5e" };
+const STATUS_COLORS = { "进行中":"#f59e0b","通过":"#22c55e","不通过":"#f43f5e","待定":"#94a3b8","已入职":"#0ea5e9" };
+const charts = {};
+
+// 兜底示例数据:直接双击 HTML 文件打开时也能看到效果
+const FALLBACK = {
+  total: 8,
+  funnel: [
+    { stage:"简历", count:8 },{ stage:"初筛", count:6 },{ stage:"面试", count:4 },
+    { stage:"Offer", count:2 },{ stage:"入职", count:1 },{ stage:"淘汰", count:3 },
+  ],
+  trend: [
+    { date:"07-21", count:1 },{ date:"07-23", count:2 },{ date:"07-25", count:1 },
+    { date:"07-28", count:2 },{ date:"07-30", count:1 },{ date:"08-01", count:1 },
+  ],
+  candidates: [
+    { name:"张三", position:"后端工程师", stage:"面试", status:"通过", salary:15000, note:"二面约周四", source:"企业微信", create_time:"2026-08-01 10:20" },
+    { name:"李四", position:"前端工程师", stage:"Offer", status:"通过", salary:12000, note:"周五入职", source:"企业微信", create_time:"2026-08-01 09:15" },
+    { name:"王五", position:"产品经理", stage:"淘汰", status:"不通过", salary:0, note:"简历不合适", source:"企业微信", create_time:"2026-07-30 16:40" },
+  ],
+};
+
+function money(n){ return n >= 10000 ? (n/10000).toFixed(1)+" 万" : n ? n.toLocaleString() : "—"; }
+
+function initCharts(){
+  charts.funnel = echarts.init(document.getElementById('funnel'));
+  charts.stagePie = echarts.init(document.getElementById('stagePie'));
+  charts.trend = echarts.init(document.getElementById('trend'));
+  window.addEventListener('resize', () => Object.values(charts).forEach(c => c.resize()));
+}
+
+function render(data){
+  const sc = data.stage_count || {};
+  const total = data.total || 0;
+  const active = (sc["初筛"]||0) + (sc["面试"]||0);
+
+  document.getElementById('statCards').innerHTML = [
+    ["fa-users","候选人总数", total, "text-blue-600","bg-blue-50"],
+    ["fa-spinner","进行中(初筛+面试)", active, "text-amber-500","bg-amber-50"],
+    ["fa-handshake-o","Offer 数", sc["Offer"]||0, "text-emerald-600","bg-emerald-50"],
+    ["fa-check-circle","已入职", sc["入职"]||0, "text-sky-600","bg-sky-50"],
+  ].map(([icon,label,val,color,bg]) => `
+    <div class="card p-4 flex items-center gap-3">
+      <div class="w-11 h-11 rounded-xl ${bg} flex items-center justify-center text-xl ${color}"><i class="fa ${icon}"></i></div>
+      <div>
+        <p class="text-2xl font-bold text-slate-800">${val}</p>
+        <p class="text-xs text-slate-400">${label}</p>
+      </div>
+    </div>`).join('');
+
+  // 漏斗
+  charts.funnel.setOption({
+    tooltip: { trigger:'item', formatter: p => `${p.name}: ${p.value} 人` },
+    series: [{
+      type:'funnel', left:'12%', width:'76%', top:10, bottom:10, minSize:'25%', maxSize:'95%', sort:'descending', gap:3,
+      label:{ formatter:p => `${p.name}  ${p.value}`, color:'#334155' },
+      data: (data.funnel||[]).map(d => ({ name:d.stage, value:d.count, itemStyle:{color:STAGE_COLORS[d.stage]||'#6366f1'} })),
+    }],
+  });
+
+  // 阶段分布饼图
+  charts.stagePie.setOption({
+    tooltip: { trigger:'item', formatter:'{b}: {c} 人 ({d}%)' },
+    legend:{ bottom:0, textStyle:{fontSize:11} },
+    series: [{
+      type:'pie', radius:['42%','68%'], center:['50%','44%'], itemStyle:{borderRadius:6,borderColor:'#fff',borderWidth:2},
+      label:{ show:false },
+      data: Object.entries(sc).map(([name,count]) => ({ name, value:count, itemStyle:{color:STAGE_COLORS[name]||'#6366f1'} })),
+    }],
+  });
+
+  // 趋势折线
+  charts.trend.setOption({
+    tooltip:{ trigger:'axis' },
+    grid:{ left:40, right:16, top:20, bottom:28 },
+    xAxis:{ type:'category', data:(data.trend||[]).map(d=>d.date), axisLabel:{fontSize:11} },
+    yAxis:{ type:'value', minInterval:1, axisLabel:{fontSize:11} },
+    series:[{ type:'line', smooth:true, symbolSize:7, areaStyle:{color:'rgba(59,130,246,.12)'},
+      lineStyle:{width:3,color:'#3b82f6'}, itemStyle:{color:'#3b82f6'},
+      data:(data.trend||[]).map(d=>d.count) }],
+  });
+
+  window.__candidates = data.candidates || [];
+  renderTable();
+}
+
+function renderTable(){
+  const f = document.getElementById('stageFilter').value;
+  const rows = (window.__candidates||[]).filter(c => !f || c.stage === f);
+  const tb = document.getElementById('tbody');
+  tb.innerHTML = rows.map(c => `
+    <tr class="border-b border-slate-100 hover:bg-slate-50">
+      <td class="py-2.5 pr-4 font-medium text-slate-700">${c.name}</td>
+      <td class="py-2.5 pr-4 text-slate-500">${c.position||'—'}</td>
+      <td class="py-2.5 pr-4"><span class="badge" style="background:${STAGE_COLORS[c.stage]}22;color:${STAGE_COLORS[c.stage]}">${c.stage}</span></td>
+      <td class="py-2.5 pr-4"><span class="badge" style="background:${STATUS_COLORS[c.status]||'#64748b'}22;color:${STATUS_COLORS[c.status]||'#64748b'}">${c.status}</span></td>
+      <td class="py-2.5 pr-4 text-slate-600">${money(c.salary)}</td>
+      <td class="py-2.5 pr-4 text-slate-500 max-w-xs truncate">${c.note||'—'}</td>
+      <td class="py-2.5 pr-4 text-slate-400 text-xs">${c.source||'企业微信'}</td>
+      <td class="py-2.5 text-slate-400 text-xs whitespace-nowrap">${c.create_time}</td>
+    </tr>`).join('');
+  document.getElementById('emptyTip').classList.toggle('hidden', rows.length > 0);
+}
+
+async function loadData(){
+  try {
+    const resp = await fetch('/api/dashboard', { cache:'no-store' });
+    if (!resp.ok) throw new Error('api error');
+    const data = await resp.json();
+    document.getElementById('updateTime').textContent = '更新于 ' + new Date().toLocaleTimeString();
+    document.getElementById('aiMode').textContent = '数据源:后端实时';
+    render(data);
+  } catch(e) {
+    // 后端未启动或直接双击打开:展示示例数据
+    document.getElementById('aiMode').textContent = '数据源:示例(未连接后端)';
+    render(FALLBACK);
+  }
+}
+
+initCharts();
+loadData();
+// 30 秒自动刷新,体现"实时同步"
+setInterval(loadData, 30000);
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+# 本机私有配置(含真实 API Key / 机器人凭据),不提交
+config_local.py
+
+# Python 缓存
+__pycache__/
+*.pyc
+
+# 运行产物:SQLite 数据文件(用 seed_demo.py 重新生成)
+recruit.db
+recruit.db-journal
+
+# 导出的同步文件
+招聘数据_同步腾讯文档.csv

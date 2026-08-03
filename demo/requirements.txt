@@ -1,0 +1,6 @@
+# 招聘数据管家 Demo · 依赖清单
+# 核心 Demo(app.py 看板 / AI解析 / 存储)全部使用 Python 标准库,零第三方依赖。
+# 企业微信智能机器人接收(wecom_robot.py)需要官方 Python SDK:
+#   pip install -i https://pypi.tuna.tsinghua.edu.cn/simple wecom-aibot-python-sdk
+# 可选:调用 DeepSeek 大模型(不装也可用内置规则引擎)
+#   - 在 config.py 填写 DEEPSEEK_API_KEY 即可,无需额外安装
