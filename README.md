@@ -29,7 +29,7 @@ AI 大模型自动解析为结构化数据写入数据库,招聘看板实时更�
 
 ```bash
 git clone https://github.com/CHENGZHUOCH/recruit-ai.git
-cd REPO/demo
+cd recruit-ai/demo
 python seed_demo.py    # 生成 30 条演示数据
 python app.py          # 启动看板服务
 ```
